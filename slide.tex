@@ -19,15 +19,17 @@
   \begin{columns}
     \begin{column}{0.6\textwidth}
       \begin{itemize}
-        \item è un \textbf{target di compilazione}
+        \item è un linguaggio bytecode che offre tempi di esecuzione rapidi e un
+        formato portabile e compatto
+        \item è stato ideato come un \textbf{target di compilazione}
         \begin{itemize}
           \item esistono compilatori da C(++), Rust ed altri linguaggi
         \end{itemize}
-      \item è pensato per eseguire codice sui \textbf{browser} (recentemente anche su Node.js)
-
-        \item è un linguaggio bytecode che offre tempi di esecuzione rapidi e un
-        formato portabile e compatto
-        \item è implementato dalla maggior parte dei browser
+        \item è pensato per eseguire codice in maniera efficiente sui
+          \textbf{browser} ed è implementato dalla maggior parte di questi
+        \begin{itemize}
+          \item può essere eseguito anche in ambienti di backend come Node.js
+        \end{itemize}
       \end{itemize}
     \end{column}
     \begin{column}{0.4\textwidth}
@@ -42,13 +44,8 @@
     \Fontvi
     \begin{column}{0.6\textwidth}
   \begin{itemize}
-    \item le istruzioni sono eseguite su una \textbf{macchina virtuale} stack-based
     \item gli elementi del programma (per esempio funzioni o variabili) sono
       identificati da \textbf{indici} interi
-    \begin{itemize}
-      \item esistono sezioni che associano ad un indice una funzione o il
-        valore di una variabile 
-    \end{itemize}
     \item staticamente tipato con quattro tipi primitivi: 
       \begin{itemize}
         \item \textbf{i32} e \textbf{i64} per interi a 32 e 64 bit
@@ -75,9 +72,7 @@
   \begin{minted}{c}
     puts("Hello, world!");
   \end{minted}
-
-  viene compilato in 
-
+  
   \begin{minted}{wat}
     (module
       ;; Imports from JavaScript namespace and log function
@@ -116,20 +111,14 @@
 \end{frame}
 
 \begin{frame}
-  \frametitle{Principali mitigazioni}
+  \frametitle{Principali mitigazioni nei binari nativi}
   \begin{itemize}
     \item i binari nativi offrono diverse mitigazioni in maniera da rendere
       difficile l'utilizzo di exploit della memoria
       \begin{itemize}
-        \item \textbf{Address Layout Space Randomization} (ASLR): gli indirizzi
-          del codice, dello stack e dello heap vengono modificati per ogni
-          esecuzione
-        \item \textbf{Guard page}: vengono inserite pagine non mappate tra le
-          regioni della memoria (codice, stack e heap) per evitare che un
-          overflow in una regione possa sovrascrivere dati in un'altra
-        \item \textbf{Stack canary}: è un valore inserito prima dell'indirizzo di
-          ritorno di una funzione; se il valore del canarino risulta diverso
-          (a causa di un overflow) il programma viene interrotto  
+        \item \textbf{Address Layout Space Randomization} (ASLR)      
+        \item \textbf{Guard page}        
+        \item \textbf{Stack canary} 
       \end{itemize}
     \item esistono sezioni dedicate per i dati costanti e statici in modo che
       non possano essere sovrascritti
@@ -154,7 +143,7 @@
       allocato per il buffer
     \item ogni area è scrivibile: dati apparentemente costanti possono essere
       sovrascritti
-    \item è totalmente allocata: per l'attaccante ogni puntatore è valido (non
+    \item non esistono pagine non allocate: per l'attaccante ogni puntatore è valido (non
       esistono page fault)
   \end{itemize}
 
@@ -231,7 +220,7 @@
         \item le variabili statiche sono salvate nella regione \textbf{data}
         \begin{itemize}
           \item dato che non esistono aree non scrivibili, non esiste una
-            sezione dedicata alle variabili costanti (\textbf{.rodata} negli ELF)
+            sezione dedicata alle variabili costanti         
         \end{itemize}
       \item \textbf{strcpy()} non effettua controlli sulla dimensioni dell'input
           dell'utente: è possibile sovrascrivere dati sullo stack
