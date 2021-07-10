@@ -98,7 +98,7 @@
 \begin{frame}
   \frametitle{Memoria lineare}
   \begin{columns}
-    \begin{column}{0.6\textwidth}
+    \begin{column}{0.65\textwidth}
       \begin{itemize}
         \item array \textbf{globale} di byte indirizzato da puntatori di tipo i32
         \pause
@@ -109,8 +109,8 @@
         \item \textbf{tutta la memoria} risulta allocata al programmatore: ogni puntatore compreso tra [0, mem\_max] è valido 
       \end{itemize}
     \end{column}
-    \begin{column}{0.4\textwidth}
-      \centerline{\includegraphics[width=7cm,height=3.5cm,keepaspectratio]{images/memman.png}}
+    \begin{column}{0.35\textwidth}
+      \centerline{\includegraphics[width=8cm,height=4cm,keepaspectratio]{images/memman.png}}
     \end{column}
   \end{columns}
 \end{frame}
@@ -249,9 +249,7 @@
         \includegraphics[width=4cm,height=6cm,keepaspectratio]{images/memory_layout.png}
         \newline
         \begin{figure}
-          \only<-3>{\transparent{0.4}{\includegraphics[width=4cm,height=6cm,keepaspectratio]{images/xss.png}}\vfill}
-           
-          \only<4>{\includegraphics[width=4cm,height=6cm,keepaspectratio]{images/xss.png}}
+          \includegraphics[width=4cm,height=6cm,keepaspectratio]{images/xss.png}
           \caption{Chiamando \textbf{vuln()} con la stringa
           ";;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;alert('XSS')"}
         \end{figure}
