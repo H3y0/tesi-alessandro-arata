@@ -1,11 +1,17 @@
 \documentclass{beamer}
 \usepackage{minted}
+\usepackage{transparent}
+\usetheme{Boadilla}
+\usepackage[ddmmyyyy]{datetime}
+\usecolortheme{beaver}
+\setbeamercovered{transparent}
 \setbeamertemplate{caption}{\raggedright\insertcaption\par}
 \newcommand\Fontvi{\fontsize{9.5}{7.2}\selectfont}
 \usepackage[T1]{fontenc}
+
 \begin{document}
 
-\title{Analisi della sicurezza binaria di WebAssembly}
+\title[Sicurezza binaria di WebAssembly]{Analisi della sicurezza binaria di WebAssembly}
 \author{Alessandro Arata}
 \institute{Universitá di Genova}
 \date{\today}
@@ -21,40 +27,17 @@
       \begin{itemize}
         \item è un linguaggio bytecode che offre tempi di esecuzione rapidi e un
         formato portabile e compatto
-        \item è stato ideato come un \textbf{target di compilazione}
-        \begin{itemize}
-          \item esistono compilatori da C(++), Rust ed altri linguaggi
-        \end{itemize}
-        \item è pensato per eseguire codice in maniera efficiente sui
-          \textbf{browser} 
-        \begin{itemize}
-          \item può essere eseguito anche in ambienti di backend come Node.js
-        \end{itemize}
+      \pause
+      \item è stato ideato come un \textbf{target di compilazione} (da C, C++,
+        Rust...)
+      \pause
+      \item è pensato per eseguire codice in maniera efficiente sui \textbf{browser} o in backend (Node.js) 
       \end{itemize}
     \end{column}
     \begin{column}{0.4\textwidth}
       \centerline{\includegraphics[width=3cm,height=3cm,keepaspectratio]{images/logo.png}}
       \newline\newline\newline
       \centerline{\includegraphics[width=4cm,height=4cm,keepaspectratio]{images/browser-logos.png}}
-    \end{column}
-  \end{columns}
-\end{frame}
-
-\begin{frame}
-  \frametitle{WebAssembly - gestione della memoria}
-  \begin{columns}
-    \begin{column}{0.6\textwidth}
-  \begin{itemize}
-    \item staticamente tipato con quattro tipi primitivi: \textbf{i32/64},
-      \textbf{f32/64}
-      \item lo stack delle chiamate e le variabili primitive sono gestiti dalla macchina virtuale
-    \item i tipi non primitivi (stringhe, indirizzi, classi, struct...) vengono
-      salvati nella \textbf{memoria lineare}
-    \item la memoria lineare è gestita dal programma
-  \end{itemize} 
-  \end{column}
-    \begin{column}{0.4\textwidth}
-  \centerline{\includegraphics[width=10cm,height=3.5cm,keepaspectratio]{images/linmem.png}}
     \end{column}
   \end{columns}
 \end{frame}
@@ -69,6 +52,8 @@
   \vspace{0.2in}
   \centerline{corrisponde nel formato assembly di WebAssembly  (\textbf{.wat}) a}
   \vspace{0.2in}
+
+  \pause
 
   \begin{minted}{wat}
     (module
@@ -91,15 +76,37 @@
 \end{frame}
 
 \begin{frame}
+  \frametitle{WebAssembly - tipi e gestione della memoria}
+  \begin{columns}
+    \begin{column}{0.6\textwidth}
+  \begin{itemize}
+    \item staticamente tipato con quattro tipi primitivi: \textbf{i32/64},
+      \textbf{f32/64}
+    \item lo stack delle chiamate e le variabili primitive sono gestiti dalla macchina virtuale
+    \pause
+    \item i tipi non primitivi (stringhe, indirizzi, classi, struct...) vengono
+      salvati nella \textbf{memoria lineare}
+    \item la memoria lineare è gestita dal programma
+  \end{itemize} 
+  \end{column}
+  \begin{column}{0.4\textwidth}
+  \centerline{\includegraphics[width=10cm,height=3.5cm,keepaspectratio]{images/linmem.png}}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}
   \frametitle{Memoria lineare}
   \begin{columns}
     \begin{column}{0.6\textwidth}
       \begin{itemize}
         \item array \textbf{globale} di byte indirizzato da puntatori di tipo i32
-      \item è divisa in \textbf{regioni} per heap, stack e dati statici
-        \item contiene tipi non primitivi 
+        \pause
+        \item è divisa in \textbf{regioni} per heap, stack e dati statici
+        \pause
         \item è sia leggibile che scrivibile ma non eseguibile 
-        \item tutta la memoria risulta allocata al programmatore: ogni puntatore compreso tra [0, mem\_max] è valido 
+        \pause
+        \item \textbf{tutta la memoria} risulta allocata al programmatore: ogni puntatore compreso tra [0, mem\_max] è valido 
       \end{itemize}
     \end{column}
     \begin{column}{0.4\textwidth}
@@ -114,56 +121,59 @@
     \item i binari nativi offrono diverse mitigazioni in maniera da rendere
       difficile l'utilizzo di exploit della memoria
       \begin{itemize}
-        \item \textbf{Address Layout Space Randomization} (ASLR)      
-        \item \textbf{Guard page}        
+        \item \textbf{Address Space Layout Randomization} (ASLR)     
+        \pause
+        \item \textbf{Guard page}   
+        \pause
         \item \textbf{Stack canary} 
       \end{itemize}
+    \pause 
     \item esistono sezioni non scrivibili per i dati costanti in modo che
       non possano essere sovrascritti
+    \pause
     \item la memoria del processo è divisa in pagine non necessariamente sempre
-      mappate
+      mappate in memoria
       \begin{itemize}
         \item un attaccante deve evitare di accedere a pagine non allocate
-          (verrebbe sollevato un fault)
       \end{itemize}
   \end{itemize}
 \end{frame}
 
 \begin{frame}
   \frametitle{Memoria lineare - sicurezza binaria}
-  \begin{columns}
-    \begin{column}{0.6\textwidth}
-      \begin{itemize}
-        \item no \textbf{ASLR}: la posizione di una elemento è "predicibile"
-        \item nessuna \textbf{guard page} tra le regioni: è possibile
-          sovrascrivere dati di regioni contigue
-        \item nessuna \textbf{stack canary}: il binario non controlla da sè se si scriva
-          oltre lo spazio
-          allocato per il buffer
-        \item ogni area è scrivibile: dati apparentemente costanti possono essere
-          sovrascritti
-        \item per l'attaccante ogni puntatore è valido dato che non esistono page fault
-      \end{itemize}
-    \end{column}
-    \begin{column}{0.4\textwidth}
-      \centerline{\includegraphics[width=5cm,height=3cm,keepaspectratio]{images/attack.png}}
-    \end{column}
-  \end{columns}
+  \begin{itemize}
+    \item no \textbf{ASLR}: la posizione di una elemento rimane costante
+      attraverso tutte le esecuzioni del programma
+    \pause
+    \item nessuna \textbf{guard page} tra le regioni: è possibile
+      sovrascrivere dati di regioni contigue
+    \pause
+    \item nessuna \textbf{stack canary}: il binario non controlla da sè se si scriva
+      oltre lo spazio
+      allocato per il buffer
+    \pause
+    \item ogni area è scrivibile: dati apparentemente costanti possono essere
+      sovrascritti
+    \pause
+    \item per l'attaccante ogni puntatore è valido dato che non esistono page fault
+  \end{itemize}
 \end{frame}
 
 \begin{frame}[fragile]
-  Rispetto alle mitigazioni include nei binari nativi, la memoria lineare di
-  WebAssembly non offre molto dal punto di vista della sicurezza binaria.
-\newline\newline
-  Cosa succede se si compila un programma \textbf{vulnerabile} in WebAssembly?
-\newline\newline
+  \begin{block}{Sulla sicurezza di WebAssembly} 
+    [...] the presence of control-flow integrity and protected call stacks prevents direct code injection attacks. Thus, common mitigations such as data execution prevention (DEP) and stack smashing protection (SSP) are not needed by WebAssembly programs.
+    \newline\newline\url{https://webassembly.org/docs/security} 
+  \end{block}
+  \pause
+  Cosa succede se un programma \textbf{vulnerabile} viene compilato in WebAssembly?
+\newline
   \begin{minted}{c}
     void vuln() {
       char buffer[16];
       gets(buffer); // !!!
     }
   \end{minted}
-\end{frame}
+  \end{frame}
 
 \begin{frame}
   \frametitle{Primitiva di attacco: buffer overflow}
@@ -176,11 +186,12 @@
           \item si possono sovrascrivere variabili locali o indirizzi di
             ritorno
         \end{itemize}
+        \pause
         \item funzioni come \textbf{gets()} e \textbf{strcpy()} permettono questo tipo di attacco  
       \end{itemize} 
     \end{column}
     \begin{column}{0.4\textwidth}
-      \centerline{\includegraphics[width=10cm,height=6.5cm,keepaspectratio]{images/stack.png}}
+      \centerline{\includegraphics[width=9cm,height=5.5cm,keepaspectratio]{images/stack.png}}
     \end{column}
   \end{columns}
 \end{frame}
@@ -217,11 +228,12 @@
       \begin{itemize}
         \item le variabili statiche sono salvate nella regione \textbf{data}
           (scrivibile)
+        \pause
         \item \textbf{strcpy()} non effettua controlli sulla dimensioni dell'input: è possibile sovrascrivere dati sullo stack
-        \begin{itemize}
-          \item un overflow nello stack riesce a scrivere nella regione \textbf{data}
-        \end{itemize}
-      \item sovrascrivendo la stringa contenuta nella variabile
+        \pause
+        \item un overflow nello stack riesce a scrivere nella regione \textbf{data}
+        \pause
+      \item sovrascrivendo la stringa
         \textbf{safe\_script} si
           possono eseguire comandi JavaScript arbitrari
         \begin{itemize}
@@ -234,7 +246,7 @@
     \begin{column}{0.45\textwidth}
       \begin{figure}[htbp]
         \includegraphics[width=4cm,height=6cm,keepaspectratio]{images/memory_layout.png}
-        \newline\newline\newline
+        \newline
         \begin{figure}
           \includegraphics[width=4cm,height=6cm,keepaspectratio]{images/xss.png}
           \caption{Chiamando \textbf{vuln()} con la stringa
@@ -246,57 +258,67 @@
 \end{frame}
 
 \begin{frame}[fragile]
-  \frametitle{Sovrascrivere dati sullo heap}
+  \frametitle{Heap overflow (a partire dallo stack)}
   \begin{itemize}
     \item similmente è possibile sovrascrivere dati sullo heap
+    \pause
     \item la libreria \textbf{libpng} contiene un buffer overflow che
-      è possibile sfruttrare convertendo un immagine da pnm a png 
+      è possibile sfruttare convertendo un immagine da pnm a png 
+  \pause
   \end{itemize}
+  \vspace{0.15in}
   \begin{minted}{c++}
-    int main() {
-      std::string img_tag = 
-        "<img src='data:image/png;base64,";
-      // CVE-2018-14550
-      pnm2png("input.pnm", "output.png");        
-      img_tag += file_to_base64("output.png") + "'>";
-      emcc::global("document").call("write", img_tag);
-    }
+    std::string img_tag = 
+      "<img src='data:image/png;base64,";
+    pnm2png("input.pnm", "output.png");        
+    img_tag += file_to_base64("output.png") + "'>";
+    emcc::global("document").call("write", img_tag);
   \end{minted}
+  \vspace{0.15in}
+  \pause
   \begin{itemize}
     \item se l'input dell'utente non viene controllato/sanitizzato, è possibile
-      sovrascrivere la string \textbf{img\_tag} situata nello heap 
-    \item questo causa un attacco di tipo XSS nel browser
+      sovrascrivere la stringa \textbf{img\_tag} situata nello heap utilizzando
+      un buffer overflow
+    \begin{itemize}
+      \item questo causa un attacco di tipo XSS nel browser
+    \end{itemize}
   \end{itemize}
 \end{frame}
 
 \begin{frame}
-  \frametitle{Sovrascrivere dati sullo heap}
+  \frametitle{Heap overflow (a partire dallo stack)}
   \Fontvi 
   \begin{columns}
     \begin{column}{0.5\textwidth}
       \begin{figure}
         \includegraphics[width=5cm,height=6cm,keepaspectratio]{images/site.png}
         \caption{Il sito chiede all'utente un'immagine in input: non vengono
-        fatti controlli sul tipo di file} 
+        fatti controlli sul tipo di file.} 
       \end{figure} 
+      \pause
       \begin{figure}
-        \includegraphics[width=4cm,height=4cm,keepaspectratio]{images/butfly.png}
+        \only<1>{\transparent{0.4}{\includegraphics[width=4cm,height=4cm,keepaspectratio]{images/butfly.png}}\vfill}
+        \only<2->{\includegraphics[width=4cm,height=4cm,keepaspectratio]{images/butfly.png}}
         \caption{Se l'utente immette un'immagine, questa viene convertita
-        e mostrata nel browser} 
+        e mostrata nel browser.}
       \end{figure} 
-
+    \pause
     \end{column}
     \begin{column}{0.5\textwidth}
-      Utilizzando come payload
+      Utilizzando come payload un file contenente
       \newline\newline\newline
       AAAAAAAAAAAAAAAAAAAAAAAA...
       <script>alert('XSS')</script><!- -
       \newline\newline\newline
+      \pause
       si effettua un overflow nello stack che permette di sostituire al tag
       \textbf{<img>} il tag \textbf{<script>} nello heap: questo provoca un attacco di
-      tipo XSS
+      tipo XSS.
       \newline\newline\newline
-      \centerline{\includegraphics[width=5.5cm,height=5.5cm,keepaspectratio]{images/xss.png}}
+      \only<-3>{\transparent{0.4}{\centerline{\includegraphics[width=5.5cm,height=5.5cm,keepaspectratio]{images/xss.png}}}\vfill}
+    \only<4>{\centerline{\includegraphics[width=5.5cm,height=5.5cm,keepaspectratio]{images/xss.png}}}
+
     \end{column}
 
   \end{columns}
@@ -306,9 +328,20 @@
 \begin{frame}
   \frametitle{Conclusioni}
   \begin{itemize}
-    \item WebAssembly ha reintrodotto vulnerabilitá precendentemente mitigate
-      e introdotto nuovi tipi di attacchi, come sovrascivere dati costanti
-    \item  
+    \item WebAssembly ha reintrodotto vulnerabilità precedentemente mitigate 
+    \pause
+    \item Ha inoltre introdotto nel mondo web vulnerabilità legate al mondo dei binari
+      \begin{itemize}
+        \item buffer/heap overflow
+        \item format string
+        \item ...
+      \end{itemize}
+    \pause
+    \item Ha infine reso possibili nuovi tipi di attacco
+      \begin{itemize}
+        \item sovrascrivere dati "costanti"
+        \item sovrascrivere dati di una regione partendo da un'altra
+      \end{itemize}
   \end{itemize}
 \end{frame}
 
