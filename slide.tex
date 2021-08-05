@@ -13,11 +13,11 @@
 
 \title[Sicurezza binaria di WebAssembly]{Analisi della sicurezza binaria di WebAssembly}
 \author{Alessandro Arata}
-\institute{Universitá di Genova}
-\date{\today}
-
+\date{17 Settembre 2021}
 \begin{frame}
+\centerline{\includegraphics[width=4cm,height=4cm,keepaspectratio]{images/unige.png}}
   \titlepage
+  \centerline{Relatore: Prof. Giovanni Lagorio}
 \end{frame}
 
 \begin{frame}
@@ -25,13 +25,13 @@
   \begin{columns}
     \begin{column}{0.6\textwidth}
       \begin{itemize}
-        \item è un linguaggio bytecode che offre tempi di esecuzione rapidi e un
-        formato portabile e compatto
+        \item linguaggio bytecode 
+        \item tempi di esecuzione rapidi
+        \item formato portabile
       \pause
-      \item è stato ideato come un \textbf{target di compilazione} (da C, C++,
-        Rust...)
+      \item \textbf{target di compilazione}
       \pause
-      \item è pensato per eseguire codice in maniera efficiente sui \textbf{browser} o in backend (Node.js) 
+      \item eseguito su \textbf{browser} o in backend 
       \end{itemize}
     \end{column}
     \begin{column}{0.4\textwidth}
@@ -76,17 +76,21 @@
 \end{frame}
 
 \begin{frame}
-  \frametitle{WebAssembly - tipi e gestione della memoria}
+  \frametitle{Tipi e gestione della memoria di WebAssembly}
   \begin{columns}
     \begin{column}{0.6\textwidth}
   \begin{itemize}
-    \item staticamente tipato con quattro tipi primitivi: \textbf{i32/64},
-      \textbf{f32/64}
-    \item lo stack delle chiamate e le variabili primitive sono gestiti dalla macchina virtuale
+    \item staticamente tipato
+      \begin{itemize}
+        \item \textbf{i32/64} e \textbf{f32/64}
+      \end{itemize}
     \pause
-    \item i tipi non primitivi (stringhe, indirizzi, classi, struct...) vengono
-      salvati nella \textbf{memoria lineare}
-    \item la memoria lineare è gestita dal programma
+    \item stack delle chiamate gestito dalla macchina virtuale
+    \pause
+    \item tipi non primitivi salvati \newline nella \textbf{memoria lineare}
+    \begin{itemize}
+      \item gestita dal programma
+    \end{itemize}
   \end{itemize} 
   \end{column}
   \begin{column}{0.4\textwidth}
@@ -100,105 +104,104 @@
   \begin{columns}
     \begin{column}{0.6\textwidth}
       \begin{itemize}
-        \item array \textbf{globale} di byte indirizzato da puntatori di tipo i32
+        \item array \textbf{globale} di byte
         \pause
-        \item è divisa in \textbf{regioni} per heap, stack e dati statici
+        \item divisa in \textbf{regioni} per heap, stack e dati statici
         \pause
-        \item è sia leggibile che scrivibile ma non eseguibile 
+        \item sia leggibile che scrivibile ma non eseguibile 
         \pause
-        \item \textbf{tutta la memoria} risulta allocata al programmatore: ogni puntatore compreso tra [0, mem\_max] è valido 
+        \item ogni puntatore compreso tra \newline [0, mem\_max] è valido 
       \end{itemize}
     \end{column}
     \begin{column}{0.4\textwidth}
-      \centerline{\includegraphics[width=7cm,height=3.5cm,keepaspectratio]{images/memman.png}}
+      \centerline{\includegraphics[width=9cm,height=4cm,keepaspectratio]{images/memman.png}}
     \end{column}
   \end{columns}
 \end{frame}
 
 \begin{frame}
   \frametitle{Principali mitigazioni nei binari nativi}
-  \begin{itemize}
-    \item i binari nativi offrono diverse mitigazioni in maniera da rendere
-      difficile l'utilizzo di exploit della memoria
-      \pause
       \begin{itemize}
         \item \textbf{Address Space Layout Randomization} (ASLR)     
         \pause
-        \item \textbf{Guard page}   
+        \item \textbf{Guard pages}   
         \pause
-        \item \textbf{Stack canary} 
-      \end{itemize}
+        \item \textbf{Stack canaries}
+        \pause 
+        \item \textbf{Non-executable stack} (NX)
     \pause 
-    \item esistono sezioni non scrivibili per i dati costanti in modo che
-      non possano essere sovrascritti
+    \item esistono sezioni non scrivibili (per i dati costanti)
     \pause
-    \item la memoria del processo è divisa in pagine non necessariamente sempre
-      mappate in memoria
+    \item aree di memoria del processo potrebbero non essere mappate
       \begin{itemize}
-        \item un attaccante deve evitare di accedere a pagine non allocate
+        \item page fault
       \end{itemize}
   \end{itemize}
 \end{frame}
+
+
 
 \begin{frame}
-  \frametitle{Memoria lineare - sicurezza binaria}
+  \frametitle{Sicurezza binaria della memoria lineare} 
+  \begin{columns}
+    \begin{column}{0.5\textwidth}
   \begin{itemize}
-    \item no \textbf{ASLR}: la posizione di una elemento rimane costante
-      attraverso tutte le esecuzioni del programma
+    \item \textcolor{red}{\textbf{Address Space Layout Randomization} (ASLR)} 
     \pause
-    \item nessuna \textbf{guard page} tra le regioni: è possibile
-      sovrascrivere dati di regioni contigue
+    \item \textcolor{red}{\textbf{Guard pages}}   
     \pause
-    \item nessuna \textbf{stack canary}: il binario non controlla da sè se si scriva
-      oltre lo spazio
-      allocato per il buffer
+    \item \textcolor{red}{\textbf{Stack canaries}}
+    \pause 
+    \item \textcolor{green}{\textbf{Non-executable stack} (NX)}
+    
+      \pause
+    \end{itemize}
+    \end{column}
+    \begin{column}{0.5\textwidth}
+      \centerline{\includegraphics[width=10cm,height=5cm,keepaspectratio]{images/mitigations.png}}
+    \end{column}
+  \end{columns}
+
+  \vspace{0.15in}
+    \begin{itemize}
+    \item \textcolor{red}{esistono sezioni non scrivibili (per i dati
+      costanti)}
     \pause
-    \item ogni area è scrivibile: dati apparentemente costanti possono essere
-      sovrascritti
-    \pause
-    \item per l'attaccante ogni puntatore è valido dato che non esistono page fault
+    \item \textcolor{red}{aree di memoria del processo potrebbero non essere
+    mappate}
+      \begin{itemize}
+        \item \textcolor{red}{page fault}
+      \end{itemize}
   \end{itemize}
 \end{frame}
-
-\begin{frame}[fragile]
-  \begin{block}{Sulla sicurezza di WebAssembly} 
-    [...] the presence of control-flow integrity and protected call stacks prevents direct code injection attacks. Thus, common mitigations such as data execution prevention (DEP) and stack smashing protection (SSP) are not needed by WebAssembly programs.
-    \newline\newline\url{https://webassembly.org/docs/security} 
-  \end{block}
-  \pause
-  Cosa succede se un programma \textbf{vulnerabile} viene compilato in WebAssembly?
-\newline
-  \begin{minted}{c}
-    void vuln() {
-      char buffer[16];
-      gets(buffer); // !!!
-    }
-  \end{minted}
-  \end{frame}
 
 \begin{frame}
   \frametitle{Primitiva di attacco: buffer overflow}
   \begin{columns}
     \begin{column}{0.6\textwidth}
       \begin{itemize}
-        \item se la lunghezza dell'input dell'utente non viene controllata,
-          è possibile scrivere al di fuori di un buffer
+        \item l'attaccante scrive al di fuori del buffer allocato         
         \begin{itemize}
           \item si possono sovrascrivere variabili locali o indirizzi di
             ritorno
         \end{itemize}
         \pause
-        \item funzioni come \textbf{gets()} e \textbf{strcpy()} permettono questo tipo di attacco  
+        \item \textbf{gets()} e \textbf{strcpy()} permettono questo tipo di attacco
+        \pause
       \end{itemize} 
+        
     \end{column}
     \begin{column}{0.4\textwidth}
       \centerline{\includegraphics[width=9cm,height=5.5cm,keepaspectratio]{images/stack.png}}
     \end{column}
   \end{columns}
+  \vspace{0.15in}
+  Cosa succede se un programma \textbf{vulnerabile} a un buffer overflow viene compilato
+  in WebAssembly?
 \end{frame}
 
 \begin{frame}[fragile]
-  \frametitle{Sovrascrivere dati "costanti"}
+  \frametitle{Sovrascrivere dati ``costanti''}
   \Fontvi
   \begin{minted}{c}
     char *other_data = "AAAA";
@@ -223,26 +226,25 @@
 \end{frame}
 
 \begin{frame}
-  \frametitle{Sovrascrivere dati "costanti"}
+  \frametitle{Sovrascrivere dati ``costanti''}
   \begin{columns}
     \begin{column}{0.55\textwidth}
       \begin{itemize}
-        \item le variabili statiche sono salvate nella regione \textbf{data}
-          (scrivibile)
+        \item variabili statiche salvate nella regione \textbf{data}
         \pause
-        \item \textbf{strcpy()} non effettua controlli sulla dimensioni dell'input: è possibile sovrascrivere dati sullo stack
+        \item \textbf{strcpy()} non effettua controlli sulla dimensione dell'input
+          \begin{itemize}
+            \item si sovrascrivono dati sullo stack
+          \end{itemize}
+          \pause
+        \item l'overflow dallo stack scrive nella regione \textbf{data}
         \pause
-        \item un overflow nello stack riesce a scrivere nella regione \textbf{data}
-        \pause
-      \item sovrascrivendo la stringa
-        \textbf{safe\_script} si
-          possono eseguire comandi JavaScript arbitrari
         \begin{itemize}
-          \item \textbf{XSS} nel browser
-          \item \textbf{RCE} con Node.js
+      \item si sovrascrive \textbf{safe\_script} 
         \end{itemize}
-
-            \end{itemize}
+      \item \textbf{XSS} e \textbf{RCE}  
+      \end{itemize}
+      
     \end{column}
     \begin{column}{0.45\textwidth}
       \begin{figure}[htbp]
@@ -265,8 +267,7 @@
   \begin{itemize}
     \item similmente è possibile sovrascrivere dati sullo heap
     \pause
-    \item la libreria \textbf{libpng} contiene un buffer overflow che
-      è possibile sfruttare convertendo un immagine da pnm a png 
+    \item \textbf{libpng} contiene un buffer overflow 
   \pause
   \end{itemize}
   \vspace{0.15in}
@@ -280,11 +281,9 @@
   \vspace{0.15in}
   \pause
   \begin{itemize}
-    \item se l'input dell'utente non viene controllato/sanitizzato, è possibile
-      sovrascrivere la stringa \textbf{img\_tag} situata nello heap utilizzando
-      un buffer overflow
+    \item si può sovrascrivere \textbf{img\_tag} nello heap    
     \begin{itemize}
-      \item questo causa un attacco di tipo XSS nel browser
+      \item \textbf{XSS}
     \end{itemize}
   \end{itemize}
 \end{frame}
@@ -330,19 +329,22 @@
 
 \begin{frame}
   \frametitle{Conclusioni}
+  WebAssembly ha
+
+  \vspace{0.2in}
   \begin{itemize}
-    \item WebAssembly ha reintrodotto vulnerabilità precedentemente mitigate 
+    \item reintrodotto vulnerabilità precedentemente mitigate 
     \pause
-    \item Ha inoltre introdotto nel mondo web vulnerabilità legate al mondo dei binari
+    \item introdotto nel web vulnerabilità legate ai binari
       \begin{itemize}
         \item buffer/heap overflow
         \item format string
         \item ...
       \end{itemize}
     \pause
-    \item Ha infine reso possibili nuovi tipi di attacco
+    \item reso possibili nuovi tipi di attacco
       \begin{itemize}
-        \item sovrascrivere dati "costanti"
+        \item sovrascrivere dati ``costanti''
         \item sovrascrivere dati di una regione a partire da un'altra
       \end{itemize}
   \end{itemize}
